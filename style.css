@@ -310,6 +310,10 @@ button.material-symbols-outlined {
   font-size: 12px;
 }
 
+footer a {
+  color: inherit;
+}
+
 @media (max-width: 768px) {
   input,
   button,
