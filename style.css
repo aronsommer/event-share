@@ -18,6 +18,8 @@
   --space-s: 8px;
   --space-m: 12px;
   --space-l: 24px;
+  /* No flash over a tapped button or link on touch screens. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 [hidden] {
