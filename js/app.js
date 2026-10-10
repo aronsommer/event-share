@@ -147,48 +147,67 @@ function setIcsLinks() {
   $("receive-download").href = url;
 }
 
+// Days for an all-day event, minutes for an event with a time.
+function showUnit({ time, duration }) {
+  const unit = time.value ? "min" : "days";
+  const label = duration.nextElementSibling;
+  if (label.textContent === unit) return;
+  // Each unit keeps its own number, so correcting the time does not lose the minutes.
+  if (label.textContent) {
+    duration.dataset[label.textContent] = duration.value;
+    duration.value = duration.dataset[unit] ?? "";
+  }
+  label.textContent = unit;
+  duration.ariaLabel = `Duration in ${unit}`;
+}
+
 function addRow(values = {}) {
   const row = $("row").content.firstElementChild.cloneNode(true);
   for (const [name, value] of Object.entries(values)) {
     // Single-line inputs would drop line breaks without a space.
     row.elements[name].value = String(value).replace(/\r?\n/g, " ");
   }
+  showUnit(row.elements);
   $("rows").append(row);
 }
 
-const fieldStart = (field) =>
-  new Date(field.time.value ? `${field.date.value}T${field.time.value}` : field.date.value);
-
-function readRows() {
-  return [...$("rows").children]
-    .map(({ elements: field }) => ({
-      start: fieldStart(field),
-      allDay: !field.time.value,
-      minutes: Math.max(1, Math.round(field.minutes.valueAsNumber || 60)),
-      title: field.title.value.trim(),
-      location: field.location.value.trim(),
-      note: field.note.value.trim(),
-    }))
-    .filter((event) => !Number.isNaN(event.start.getTime()))
-    .sort((a, b) => a.start - b.start);
+// By the user's clock: an all-day event at the start of its day, a row without a date last.
+function sortedRows() {
+  const key = ({ elements: { date, time } }) => {
+    const start = new Date(`${date.value}T${time.value || "00:00"}`).getTime();
+    return Number.isNaN(start) ? Infinity : start;
+  };
+  return [...$("rows").children].toSorted((a, b) => key(a) - key(b));
 }
 
-// Rows without a date stay at the end.
-function sortRows() {
-  const key = (row) => {
-    const time = fieldStart(row.elements).getTime();
-    return Number.isNaN(time) ? Infinity : time;
-  };
-  $("rows").append(...[...$("rows").children].toSorted((a, b) => key(a) - key(b)));
+function readRows() {
+  return sortedRows()
+    .map(({ elements: field }) => {
+      const allDay = !field.time.value;
+      const duration = Math.round(field.duration.valueAsNumber);
+      return {
+        // A date alone is UTC midnight, a date with a time is local.
+        start: new Date(allDay ? field.date.value : `${field.date.value}T${field.time.value}`),
+        allDay,
+        // Without a duration it is 60, which an all-day event rounds up to one day.
+        minutes: duration > 0 ? duration * (allDay ? 1440 : 1) : 60,
+        title: field.title.value.trim(),
+        location: field.location.value.trim(),
+        note: field.note.value.trim(),
+      };
+    })
+    .filter((event) => !Number.isNaN(event.start.getTime()));
 }
 
 function rowValues(event) {
   const offset = event.allDay ? 0 : event.start.getTimezoneOffset() * 60000;
   const local = new Date(event.start - offset).toISOString();
+  const days = Math.ceil(event.minutes / 1440);
   return {
     date: local.slice(0, 10),
     time: event.allDay ? "" : local.slice(11, 16),
-    minutes: event.minutes,
+    // A single day needs no duration.
+    duration: event.allDay ? (days > 1 ? days : "") : event.minutes,
     title: event.title,
     location: event.location,
     note: event.note,
@@ -257,15 +276,20 @@ $("check").addEventListener("click", () => {
   scrollTo(0, 0);
 });
 
-$("rows").addEventListener("input", update);
+$("rows").addEventListener("input", ({ target }) => {
+  showUnit(target.closest(".row").elements);
+  update();
+});
 
 $("rows").addEventListener("click", ({ target }) => {
   if (!target.closest(".remove")) return;
   target.closest(".row").remove();
+  // The list always keeps a row.
+  if (!$("rows").children.length) addRow();
   update();
 });
 
-$("sort").addEventListener("click", sortRows);
+$("sort").addEventListener("click", () => $("rows").append(...sortedRows()));
 
 $("clear").addEventListener("click", () => {
   if (events.length && !confirm("Clear all events?")) return;

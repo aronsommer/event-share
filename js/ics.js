@@ -1,5 +1,6 @@
 import { eventEnd, stamp } from "./link.js";
 
+const DAY = 86400000;
 const PROPERTY = /^([\w-]+)((?:;[\w-]+=(?:"[^"]*"|[^;:]*))*):(.*)$/;
 const DATE_TIME = /^(\d{4})(\d\d)(\d\d)(?:T(\d\d)(\d\d)(\d\d)(Z)?)?$/;
 const DURATION = /^P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:\d+S)?)?$/;
@@ -60,7 +61,12 @@ function zonedTime(year, month, day, hour, minute, second, timeZone) {
       Date.UTC(part.year, part.month - 1, part.day, part.hour, part.minute, part.second) - time
     );
   };
-  return new Date(wall - offset(wall - offset(wall)));
+  // The time by the offset of the day before and by that of the day after.
+  const before = wall - offset(wall - DAY);
+  const after = wall - offset(wall + DAY);
+  const exists = (time) => offset(time) === wall - time;
+  // A time that occurs twice is its first occurrence, a skipped one keeps the offset before it.
+  return new Date(exists(before) || !exists(after) ? before : after);
 }
 
 function parseTime({ params, value }) {

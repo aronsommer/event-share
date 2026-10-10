@@ -241,7 +241,7 @@ button.material-symbols-outlined {
   border: 0;
 }
 
-.minutes {
+.duration {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
@@ -370,7 +370,7 @@ footer a {
     width: auto;
   }
 
-  .minutes {
+  .duration {
     grid-column: 2 / -1;
   }
 

@@ -81,7 +81,7 @@
           <input type="file" id="file" accept=".ics,text/calendar" hidden />
           <p class="hint">
             Times are in your time zone (<span id="zone"></span>). Leave the time empty for an
-            all-day event.
+            all-day event. An empty duration means 60 minutes, or one day for an all-day event.
           </p>
           <p class="hint" id="recurring" hidden>
             Recurring events were imported with their first date only.
@@ -154,9 +154,10 @@
       <fieldset class="row">
         <input name="date" type="date" max="9999-12-31" aria-label="Date" />
         <input name="time" type="time" aria-label="Time" />
-        <label class="minutes">
-          <input name="minutes" type="number" min="1" value="60" aria-label="Duration in minutes" />
-          min
+        <!-- app.js fills in the unit. -->
+        <label class="duration">
+          <input name="duration" type="number" min="1" placeholder="Duration" />
+          <span></span>
         </label>
         <input name="title" placeholder="Title" aria-label="Title" />
         <input name="location" placeholder="Location" aria-label="Location" />
